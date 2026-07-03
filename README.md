@@ -4,6 +4,8 @@ ToastKit is a small SwiftUI toast presenter for iOS apps. It shows lightweight s
 
 ## Screenshots
 
+![ToastKit demo](Documentation/Images/toastkit-demo.gif)
+
 | Non-modal toast | Modal toast | Custom content |
 | --- | --- | --- |
 | ![Non-modal ToastKit screenshot](Documentation/Images/toastkit-non-modal.svg) | ![Modal ToastKit screenshot](Documentation/Images/toastkit-modal.svg) | ![Custom ToastKit screenshot](Documentation/Images/toastkit-custom.svg) |
@@ -44,7 +46,7 @@ ToastKit.show(
 )
 ```
 
-Built-in success, warning, error, and loading toasts show a default SF Symbol automatically.
+Built-in success, warning, error, and loading toasts show a default SF Symbol automatically. On iOS 17 and later, the symbol also uses SwiftUI symbol effects when it appears; iOS 16 shows a static symbol.
 
 Show an error:
 
@@ -118,11 +120,11 @@ ToastKit.show(
 )
 ```
 
-Pass an empty symbol name to hide the SF Symbol:
+Pass `nil` explicitly to hide the SF Symbol:
 
 ```swift
 ToastKit.show(
-    ToastInfo(type: .success, msg: "Saved", sfSymbolName: "")
+    ToastInfo(type: .success, msg: "Saved", sfSymbolName: nil)
 )
 ```
 
@@ -163,6 +165,7 @@ ToastKit.configure(
         loadingBackgroundColor: .blue.opacity(0.14),
         foregroundColor: .primary,
         font: .system(size: 15, weight: .semibold),
+        symbolFont: .system(size: 22, weight: .bold),
         horizontalPadding: 22,
         verticalPadding: 12,
         contentHorizontalPadding: 24,
@@ -180,7 +183,7 @@ Available style options:
 
 - Background colors for success, warning, error, and loading states
 - Border colors for success, warning, error, and loading states
-- Text color and font
+- Text color, text font, and SF Symbol font
 - Horizontal and vertical content padding
 - Top spacing and screen-edge padding
 - Corner radius, border width, and shadow
@@ -204,6 +207,41 @@ swift build --sdk /path/to/iPhoneOS.sdk --triple arm64-apple-ios16.0
 ```
 
 `swift test` is not the primary validation command for this package because ToastKit imports UIKit and is iOS-only; plain SwiftPM tests build for macOS by default.
+
+## Demo App
+
+Open the demo project in Xcode:
+
+```bash
+open Examples/ToastKitDemo/ToastKitDemo.xcodeproj
+```
+
+Select the `ToastKitDemo` scheme, choose an iOS simulator, and run it. The demo automatically plays a short toast showcase on launch and also includes manual buttons for each toast type.
+
+To build it from the command line:
+
+```bash
+xcodebuild \
+  -project Examples/ToastKitDemo/ToastKitDemo.xcodeproj \
+  -scheme ToastKitDemo \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
+  -configuration Debug \
+  build
+```
+
+To record a GIF:
+
+```bash
+xcrun simctl io booted recordVideo /tmp/toastkit-demo.mov
+```
+
+Launch the demo while recording, stop recording with `Control-C`, then convert it:
+
+```bash
+ffmpeg -y -i /tmp/toastkit-demo.mov \
+  -vf 'fps=12,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=96[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5' \
+  Documentation/Images/toastkit-demo.gif
+```
 
 ## License
 

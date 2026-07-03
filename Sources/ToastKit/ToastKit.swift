@@ -403,7 +403,13 @@ public struct ToastInfo: Sendable {
     public var msg: String?
     public var sfSymbolName: String?
 
-    public init(type: ToastType = .success, msg: String? = nil, sfSymbolName: String? = nil) {
+    public init(type: ToastType = .success, msg: String? = nil) {
+        self.type = type
+        self.msg = msg
+        self.sfSymbolName = type.defaultSFSymbolName
+    }
+
+    public init(type: ToastType = .success, msg: String? = nil, sfSymbolName: String?) {
         self.type = type
         self.msg = msg
         self.sfSymbolName = sfSymbolName
@@ -443,6 +449,7 @@ public struct ToastStyle: Sendable {
 
     public var foregroundColor: Color
     public var font: Font
+    public var symbolFont: Font
     public var horizontalPadding: CGFloat
     public var verticalPadding: CGFloat
     public var contentHorizontalPadding: CGFloat
@@ -467,6 +474,7 @@ public struct ToastStyle: Sendable {
         loadingBorderColor: Color = .blue.opacity(0.6),
         foregroundColor: Color = .primary,
         font: Font = .system(size: 16, weight: .medium),
+        symbolFont: Font = .system(size: 22, weight: .semibold),
         horizontalPadding: CGFloat = 25,
         verticalPadding: CGFloat = 13,
         contentHorizontalPadding: CGFloat = 30,
@@ -490,6 +498,7 @@ public struct ToastStyle: Sendable {
         self.loadingBorderColor = loadingBorderColor
         self.foregroundColor = foregroundColor
         self.font = font
+        self.symbolFont = symbolFont
         self.horizontalPadding = horizontalPadding
         self.verticalPadding = verticalPadding
         self.contentHorizontalPadding = contentHorizontalPadding
@@ -541,6 +550,7 @@ public struct ToastStyle: Sendable {
 public struct CommonToast: View {
     public let toastInfo: ToastInfo
     public let style: ToastStyle
+    @State private var symbolAnimationTrigger = false
 
     public init(toastInfo: ToastInfo, style: ToastStyle = .default) {
         self.toastInfo = toastInfo
@@ -567,9 +577,16 @@ public struct CommonToast: View {
         HStack(spacing: 10) {
             if let sfSymbolName = symbolName {
                 Image(systemName: sfSymbolName)
+                    .font(style.symbolFont)
                     .imageScale(.medium)
-                    .symbolRenderingMode(.hierarchical)
+                    .symbolRenderingMode(.multicolor)
                     .foregroundStyle(symbolColor)
+                    .modifier(
+                        ToastSymbolEffectModifier(
+                            type: toastInfo.type,
+                            trigger: symbolAnimationTrigger
+                        )
+                    )
             }
 
             if let msg = toastInfo.msg {
@@ -584,6 +601,30 @@ public struct CommonToast: View {
         .padding(.vertical, style.verticalPadding)
         .modifier(ToastSurfaceModifier(style: style, type: toastInfo.type))
         .padding(.horizontal, style.contentHorizontalPadding)
+        .onAppear {
+            symbolAnimationTrigger.toggle()
+        }
+    }
+}
+
+private struct ToastSymbolEffectModifier: ViewModifier {
+    let type: ToastType
+    let trigger: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 17.0, *) {
+            switch type {
+            case .success:
+                content.symbolEffect(.bounce, value: trigger)
+            case .warning, .error:
+                content.symbolEffect(.pulse, value: trigger)
+            case .loading:
+                content.symbolEffect(.variableColor, isActive: true)
+            }
+        } else {
+            content
+        }
     }
 }
 

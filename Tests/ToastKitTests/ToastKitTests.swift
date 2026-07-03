@@ -21,6 +21,12 @@ import Testing
 @Test func toastInfoSymbolOverrideDefaultsToNil() {
     let toastInfo = ToastInfo(type: .success, msg: "Saved")
 
+    #expect(toastInfo.sfSymbolName == "checkmark.circle.fill")
+}
+
+@Test func toastInfoExplicitNilSymbolHidesIcon() {
+    let toastInfo = ToastInfo(type: .success, msg: "Saved", sfSymbolName: nil)
+
     #expect(toastInfo.sfSymbolName == nil)
 }
 
@@ -40,6 +46,7 @@ import Testing
     #expect(defaultStyle.topPadding == initializedStyle.topPadding)
     #expect(defaultStyle.cornerRadius == initializedStyle.cornerRadius)
     #expect(defaultStyle.animationDuration == initializedStyle.animationDuration)
+    #expect(String(describing: defaultStyle.symbolFont) == String(describing: initializedStyle.symbolFont))
 }
 
 @Test func dragTransitionDismissesUpwardAndDownwardGestures() {
