@@ -3,11 +3,17 @@
 ToastKit is a small SwiftUI toast presenter for iOS apps. It shows lightweight status messages in a separate `UIWindow`, supports blocking modal overlays, and lets users drag the toast up or down to dismiss it.
 
 ## Screenshots
-![Loading Toast](Documentation/Images/loading.png)
-![Success Toast](Documentation/Images/success.png)
-![Error Toast](Documentation/Images/error.png)
-![Warning Toast](Documentation/Images/warning.png)
+<p align="center">
 
+  <img src="Documentation/Images/loading.png" width="180">
+
+  <img src="Documentation/Images/success.png" width="180">
+
+  <img src="Documentation/Images/error.png" width="180">
+
+  <img src="Documentation/Images/warning.png" width="180">
+
+</p>
 
 ## Requirements
 
