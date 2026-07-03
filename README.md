@@ -5,13 +5,10 @@ ToastKit is a small SwiftUI toast presenter for iOS apps. It shows lightweight s
 ## Screenshots
 <p align="center">
 
-  <img src="Documentation/Images/loading.png" width="180">
-
-  <img src="Documentation/Images/success.png" width="180">
-
-  <img src="Documentation/Images/error.png" width="180">
-
-  <img src="Documentation/Images/warning.png" width="180">
+  <img src="Documentation/Images/loading.png" width="24%">
+  <img src="Documentation/Images/success.png" width="24%">
+  <img src="Documentation/Images/error.png" width="24%">
+  <img src="Documentation/Images/warning.png" width="24%">
 
 </p>
 
