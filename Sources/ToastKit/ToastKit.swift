@@ -429,9 +429,9 @@ public enum ToastType: Sendable {
         case .warning:
             return "exclamationmark.triangle.fill"
         case .error:
-            return "xmark.octagon.fill"
+            return "xmark.circle.fill"
         case .loading:
-            return "arrow.triangle.2.circlepath"
+            return "progress.indicator"
         }
     }
 }
@@ -475,12 +475,12 @@ public struct ToastStyle: Sendable {
         foregroundColor: Color = .primary,
         font: Font = .system(size: 16, weight: .medium),
         symbolFont: Font = .system(size: 22, weight: .semibold),
-        horizontalPadding: CGFloat = 25,
-        verticalPadding: CGFloat = 13,
+        horizontalPadding: CGFloat = 10,
+        verticalPadding: CGFloat = 10,
         contentHorizontalPadding: CGFloat = 30,
-        topPadding: CGFloat = 12,
+        topPadding: CGFloat = 8,
         cornerRadius: CGFloat = 999,
-        borderWidth: CGFloat = 1,
+        borderWidth: CGFloat = 0.5,
         shadowColor: Color = .black.opacity(0.1),
         shadowRadius: CGFloat = 30,
         shadowX: CGFloat = 0,
@@ -611,16 +611,36 @@ private struct ToastSymbolEffectModifier: ViewModifier {
     let type: ToastType
     let trigger: Bool
 
+    @State private var isLoadingRotating = false
+
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(iOS 17.0, *) {
             switch type {
             case .success:
+                content.symbolEffect(.bounce, options: .nonRepeating, value: trigger)
+            case .warning:
                 content.symbolEffect(.bounce, value: trigger)
-            case .warning, .error:
-                content.symbolEffect(.pulse, value: trigger)
+            case .error:
+                if #available(iOS 18.0, *) {
+                    content.symbolEffect(.wiggle, value: trigger)
+                } else {
+                    content.symbolEffect(.bounce, options: .repeat(2), value: trigger)
+                }
             case .loading:
-                content.symbolEffect(.variableColor, isActive: true)
+                if #available(iOS 18.0, *) {
+                    content
+                        .symbolEffect(.variableColor.iterative, options: .repeat(.continuous), isActive: true)
+                } else {
+                    content
+                        .rotationEffect(.degrees(isLoadingRotating ? 360 : 0))
+                        .animation(
+                            .linear(duration: 1.0).repeatForever(autoreverses: false),
+                            value: isLoadingRotating
+                        )
+                        .onAppear { isLoadingRotating = true }
+                        .onDisappear { isLoadingRotating = false }
+                }
             }
         } else {
             content
@@ -635,7 +655,7 @@ private struct ToastSurfaceModifier: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
 
-        #if compiler(>=6.4)
+#if compiler(>=6.4)
         if #available(iOS 26.0, *) {
             content
                 .glassEffect(.regular.tint(style.glassTintColor(for: type)), in: shape)
@@ -647,9 +667,9 @@ private struct ToastSurfaceModifier: ViewModifier {
         } else {
             fallbackSurface(content: content, shape: shape)
         }
-        #else
+#else
         fallbackSurface(content: content, shape: shape)
-        #endif
+#endif
     }
 
     private func fallbackSurface(content: Content, shape: RoundedRectangle) -> some View {
@@ -712,7 +732,7 @@ private struct ToastPreviewPlayground: View {
                 return ToastInfo(
                     type: .error,
                     msg: "Save failed. Please try again.",
-                    sfSymbolName: "xmark.octagon.fill"
+                    sfSymbolName: "xmark.circle.fill"
                 )
 
             case .loading:
@@ -739,26 +759,40 @@ private struct ToastPreviewPlayground: View {
     var body: some View {
         ZStack {
             if #available(iOS 18.0, *) {
-                MeshGradient(
-                    width: 3,
-                    height: 3,
-                    points: [
-                        [0.0, 0.0], [0.5, 0.0], [1.0, 0.0],
-                        [0.0, 0.5], [0.5, 0.45], [1.0, 0.5],
-                        [0.0, 1.0], [0.5, 1.0], [1.0, 1.0]
-                    ],
-                    colors: [
-                        .blue,
-                        .purple,
-                        .cyan,
-                        .mint,
-                        .indigo,
-                        .teal,
-                        .orange,
-                        .pink,
-                        .yellow
-                    ]
-                )
+                TimelineView(.animation) { t in
+                    let time = t.date.timeIntervalSinceReferenceDate
+                    let wave = Float(sin(time * 0.6)) * 1.8
+                    let wave2 = Float(cos(time * 0.8)) * 2.6
+
+                    MeshGradient(
+                        width: 3,
+                        height: 3,
+                        points: [
+                            [0.0, 0.0],
+                            [0.5 + wave * 0.12, 0.0],
+                            [1.0, 0.0],
+
+                            [0.0, 0.5 + wave2 * 0.10],
+                            [0.5 + wave * 0.08, 0.5 + wave2 * 0.08],
+                            [1.0, 0.5 - wave * 0.10],
+
+                            [0.0, 1.0],
+                            [0.5 - wave2 * 0.12, 1.0],
+                            [1.0, 1.0]
+                        ],
+                        colors: [
+                            Color(red: 0.30, green: 0.55, blue: 1.00),
+                            Color(red: 0.52, green: 0.42, blue: 1.00),
+                            Color(red: 0.28, green: 0.86, blue: 1.00),
+                            Color(red: 0.48, green: 0.78, blue: 1.00),
+                            Color.white.opacity(0.9),
+                            Color(red: 0.42, green: 0.92, blue: 0.95),
+                            Color(red: 0.66, green: 0.54, blue: 1.00),
+                            Color(red: 0.90, green: 0.72, blue: 1.00),
+                            Color(red: 0.35, green: 0.72, blue: 1.00)
+                        ]
+                    )
+                }
                 .ignoresSafeArea()
             }
             else {
