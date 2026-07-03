@@ -44,6 +44,8 @@ ToastKit.show(
 )
 ```
 
+Built-in success, warning, error, and loading toasts show a default SF Symbol automatically.
+
 Show an error:
 
 ```swift
@@ -95,6 +97,33 @@ ToastInfo(type: .success, msg: "Done")
 ToastInfo(type: .warning, msg: "Network unstable")
 ToastInfo(type: .error, msg: "Save failed")
 ToastInfo(type: .loading(.blue), msg: "Uploading")
+```
+
+Default symbols:
+
+- `.success`: `checkmark.circle.fill`
+- `.warning`: `exclamationmark.triangle.fill`
+- `.error`: `xmark.octagon.fill`
+- `.loading`: `arrow.triangle.2.circlepath`
+
+Override the SF Symbol for any built-in toast:
+
+```swift
+ToastKit.show(
+    ToastInfo(
+        type: .success,
+        msg: "Added to favorites",
+        sfSymbolName: "star.fill"
+    )
+)
+```
+
+Pass an empty symbol name to hide the SF Symbol:
+
+```swift
+ToastKit.show(
+    ToastInfo(type: .success, msg: "Saved", sfSymbolName: "")
+)
 ```
 
 ## Custom Content

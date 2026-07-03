@@ -2,7 +2,11 @@ import Testing
 @testable import ToastKit
 
 @Test func toastInfoInitializerStoresValues() {
-    let toastInfo = ToastInfo(type: .warning, msg: "Network unstable")
+    let toastInfo = ToastInfo(
+        type: .warning,
+        msg: "Network unstable",
+        sfSymbolName: "exclamationmark.triangle.fill"
+    )
 
     if case .warning = toastInfo.type {
         #expect(Bool(true))
@@ -11,6 +15,20 @@ import Testing
     }
 
     #expect(toastInfo.msg == "Network unstable")
+    #expect(toastInfo.sfSymbolName == "exclamationmark.triangle.fill")
+}
+
+@Test func toastInfoSymbolOverrideDefaultsToNil() {
+    let toastInfo = ToastInfo(type: .success, msg: "Saved")
+
+    #expect(toastInfo.sfSymbolName == nil)
+}
+
+@Test func toastTypesProvideDefaultSymbols() {
+    #expect(ToastType.success.defaultSFSymbolName == "checkmark.circle.fill")
+    #expect(ToastType.warning.defaultSFSymbolName == "exclamationmark.triangle.fill")
+    #expect(ToastType.error.defaultSFSymbolName == "xmark.octagon.fill")
+    #expect(ToastType.loading(.blue).defaultSFSymbolName == "arrow.triangle.2.circlepath")
 }
 
 @Test func defaultToastStyleMatchesInitializerDefaults() {

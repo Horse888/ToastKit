@@ -401,10 +401,12 @@ struct ToastHostView<Content: View>: View {
 public struct ToastInfo: Sendable {
     public var type = ToastType.success
     public var msg: String?
+    public var sfSymbolName: String?
 
-    public init(type: ToastType = .success, msg: String? = nil) {
+    public init(type: ToastType = .success, msg: String? = nil, sfSymbolName: String? = nil) {
         self.type = type
         self.msg = msg
+        self.sfSymbolName = sfSymbolName
     }
 }
 
@@ -413,6 +415,19 @@ public enum ToastType: Sendable {
     case warning
     case error
     case loading(Color)
+
+    var defaultSFSymbolName: String? {
+        switch self {
+        case .success:
+            return "checkmark.circle.fill"
+        case .warning:
+            return "exclamationmark.triangle.fill"
+        case .error:
+            return "xmark.octagon.fill"
+        case .loading:
+            return "arrow.triangle.2.circlepath"
+        }
+    }
 }
 
 public struct ToastStyle: Sendable {
@@ -532,10 +547,29 @@ public struct CommonToast: View {
         self.style = style
     }
 
+    private var symbolName: String? {
+        if let sfSymbolName = toastInfo.sfSymbolName {
+            return sfSymbolName.isEmpty ? nil : sfSymbolName
+        }
+
+        return toastInfo.type.defaultSFSymbolName
+    }
+
+    private var symbolColor: Color {
+        if case .loading(let color) = toastInfo.type {
+            return color
+        }
+
+        return style.borderColor(for: toastInfo.type)
+    }
+
     public var body: some View {
         HStack(spacing: 10) {
-            if case .loading(let color) = toastInfo.type {
-                ProgressView().tint(color)
+            if let sfSymbolName = symbolName {
+                Image(systemName: sfSymbolName)
+                    .imageScale(.medium)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(symbolColor)
             }
 
             if let msg = toastInfo.msg {
@@ -609,11 +643,11 @@ private struct ToastPreviewPlayground: View {
 
         var title: String {
             switch self {
-            case .success:  return "✅ Success"
-            case .warning:  return "⚠️ Warning"
-            case .error:    return "❌ Error"
-            case .loading:  return "⏳ Loading"
-            case .longText: return "📝 Long Text"
+            case .success:  return "Success"
+            case .warning:  return "Warning"
+            case .error:    return "Error"
+            case .loading:  return "Loading"
+            case .longText: return "Long Text"
             }
         }
 
@@ -622,31 +656,35 @@ private struct ToastPreviewPlayground: View {
             case .success:
                 return ToastInfo(
                     type: .success,
-                    msg: "✅ 同步完成"
+                    msg: "Sync complete",
+                    sfSymbolName: "checkmark.circle.fill"
                 )
 
             case .warning:
                 return ToastInfo(
                     type: .warning,
-                    msg: "⚠️ 网络不稳定"
+                    msg: "Network connection is unstable",
+                    sfSymbolName: "exclamationmark.triangle.fill"
                 )
 
             case .error:
                 return ToastInfo(
                     type: .error,
-                    msg: "❌ 保存失败，请重试"
+                    msg: "Save failed. Please try again.",
+                    sfSymbolName: "xmark.octagon.fill"
                 )
 
             case .loading:
                 return ToastInfo(
                     type: .loading(.accentColor),
-                    msg: "⏳ 正在同步中…"
+                    msg: "Syncing..."
                 )
 
             case .longText:
                 return ToastInfo(
                     type: .success,
-                    msg: "📝 这是一个很长很长的提示文本，用来测试 Toast 在多行情况下的布局是否稳定"
+                    msg: "This is a longer toast message used to verify that multiline content keeps a stable layout.",
+                    sfSymbolName: "text.alignleft"
                 )
             }
         }
