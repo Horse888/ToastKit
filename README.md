@@ -4,7 +4,7 @@ ToastKit is a small SwiftUI toast presenter for iOS apps. It shows lightweight s
 
 ## Screenshots
 
-![ToastKit demo](Documentation/Images/toastkit-demo.gif)
+<video src="Documentation/Images/ScreenDemo.mp4" controls muted playsinline width="320"></video>
 
 ## Requirements
 

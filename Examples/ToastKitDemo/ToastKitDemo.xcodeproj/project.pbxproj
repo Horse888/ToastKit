@@ -3,13 +3,15 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		1A4C0B772C10E3A100000001 /* ToastKitDemoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A4C0B762C10E3A100000001 /* ToastKitDemoApp.swift */; };
 		1A4C0B792C10E3A100000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A4C0B782C10E3A100000001 /* ContentView.swift */; };
 		1A4C0B832C10E3A100000001 /* ToastKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A4C0B822C10E3A100000001 /* ToastKit */; };
+		1AC256E52FF7D2C5000A76FA /* ToastKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1AC256E42FF7D2C5000A76FA /* ToastKit */; };
+		1AC256E82FF7D302000A76FA /* ToastKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1AC256E72FF7D302000A76FA /* ToastKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +26,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A4C0B832C10E3A100000001 /* ToastKit in Frameworks */,
+				1AC256E52FF7D2C5000A76FA /* ToastKit in Frameworks */,
+				1AC256E82FF7D302000A76FA /* ToastKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -73,6 +77,8 @@
 			name = ToastKitDemo;
 			packageProductDependencies = (
 				1A4C0B822C10E3A100000001 /* ToastKit */,
+				1AC256E42FF7D2C5000A76FA /* ToastKit */,
+				1AC256E72FF7D302000A76FA /* ToastKit */,
 			);
 			productName = ToastKitDemo;
 			productReference = 1A4C0B732C10E3A100000001 /* ToastKitDemo.app */;
@@ -103,7 +109,7 @@
 			);
 			mainGroup = 1A4C0B6A2C10E3A100000001;
 			packageReferences = (
-				1A4C0B842C10E3A100000001 /* XCLocalSwiftPackageReference "../.." */,
+				1AC256E62FF7D302000A76FA /* XCLocalSwiftPackageReference "../../../ToastKit" */,
 			);
 			productRefGroup = 1A4C0B742C10E3A100000001 /* Products */;
 			projectDirPath = "";
@@ -340,14 +346,22 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		1A4C0B842C10E3A100000001 /* XCLocalSwiftPackageReference "../.." */ = {
+		1AC256E62FF7D302000A76FA /* XCLocalSwiftPackageReference "../../../ToastKit" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../..;
+			relativePath = ../../../ToastKit;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		1A4C0B822C10E3A100000001 /* ToastKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ToastKit;
+		};
+		1AC256E42FF7D2C5000A76FA /* ToastKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ToastKit;
+		};
+		1AC256E72FF7D302000A76FA /* ToastKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ToastKit;
 		};

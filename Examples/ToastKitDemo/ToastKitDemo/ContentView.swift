@@ -8,16 +8,40 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.94, green: 0.98, blue: 1.0),
-                    Color(red: 0.98, green: 0.96, blue: 0.91),
-                    Color(red: 0.95, green: 0.97, blue: 0.94)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            if #available(iOS 18.0, *) {
+                MeshGradient(
+                    width: 3,
+                    height: 3,
+                    points: [
+                        [0.0, 0.0], [0.5, 0.0], [1.0, 0.0],
+                        [0.0, 0.5], [0.5, 0.45], [1.0, 0.5],
+                        [0.0, 1.0], [0.5, 1.0], [1.0, 1.0]
+                    ],
+                    colors: [
+                        .blue,
+                        .purple,
+                        .cyan,
+                        .mint,
+                        .indigo,
+                        .teal,
+                        .orange,
+                        .pink,
+                        .yellow
+                    ]
+                )
+                .ignoresSafeArea()
+            } else {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.94, green: 0.98, blue: 1.0),
+                        Color(red: 0.98, green: 0.96, blue: 0.91),
+                        Color(red: 0.95, green: 0.97, blue: 0.94)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+            }
 
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -175,12 +199,11 @@ private struct DemoButton: View {
             }
             .padding(.horizontal, 16)
             .frame(height: 50)
-            .background(Color.white.opacity(0.72), in: .rect(cornerRadius: 14, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Color.black.opacity(0.08))
-            }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.borderedProminent)
     }
+}
+
+#Preview {
+    ContentView()
 }
