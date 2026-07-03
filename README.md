@@ -178,4 +178,4 @@ swift build --sdk /path/to/iPhoneOS.sdk --triple arm64-apple-ios16.0
 
 ## License
 
-Add your preferred license before publishing the repository.
+ToastKit is available under the MIT license. See `LICENSE` for details.
