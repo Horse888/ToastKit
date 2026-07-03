@@ -6,10 +6,6 @@ ToastKit is a small SwiftUI toast presenter for iOS apps. It shows lightweight s
 
 ![ToastKit demo](Documentation/Images/toastkit-demo.gif)
 
-| Non-modal toast | Modal toast | Custom content |
-| --- | --- | --- |
-| ![Non-modal ToastKit screenshot](Documentation/Images/toastkit-non-modal.svg) | ![Modal ToastKit screenshot](Documentation/Images/toastkit-modal.svg) | ![Custom ToastKit screenshot](Documentation/Images/toastkit-custom.svg) |
-
 ## Requirements
 
 - iOS 16.0+
