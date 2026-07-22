@@ -1,12 +1,14 @@
 import SwiftUI
-import ToastKit
 
-struct ContentView: View {
+public struct ToastKitDemoPreview: View {
     @State private var isModal = false
     @State private var duration = 2.0
     @State private var didRunShowcase = false
+    @State private var loadingTask: Task<Void, Never>?
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         ZStack {
             if #available(iOS 18.0, *) {
                 MeshGradient(
@@ -82,7 +84,7 @@ struct ContentView: View {
                     }
 
                     DemoButton(title: "Loading", symbol: "arrow.triangle.2.circlepath") {
-                        show(.loading)
+                        runLoadingDemo()
                     }
 
                     DemoButton(title: "Custom", symbol: "sparkles") {
@@ -123,6 +125,67 @@ struct ContentView: View {
         ToastKit.show(demoToast.toastInfo, duration: duration, isModal: isModal)
     }
 
+    private func runLoadingDemo() {
+        loadingTask?.cancel()
+        loadingTask = Task {
+            for progress in loadingProgressSteps {
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    ToastKit.show(
+                        ToastInfo(type: .loading(.blue), msg: loadingMessage(for: progress)),
+                        duration: 0,
+                        isModal: isModal
+                    )
+                }
+
+                try? await Task.sleep(for: .milliseconds(loadingDelay(for: progress)))
+            }
+
+            await MainActor.run {
+                ToastKit.show(
+                    ToastInfo(type: .success, msg: "Sync complete"),
+                    duration: duration,
+                    isModal: isModal
+                )
+            }
+        }
+    }
+
+    private var loadingProgressSteps: [Int] {
+        [0, 7, 15, 26, 39, 52, 67, 81, 92, 97, 100]
+    }
+
+    private func loadingMessage(for progress: Int) -> String {
+        let phase: String
+
+        switch progress {
+        case ..<15:
+            phase = "Preparing upload"
+        case ..<52:
+            phase = "Uploading assets"
+        case ..<92:
+            phase = "Syncing records"
+        default:
+            phase = "Finalizing"
+        }
+
+        return "\(phase) \(progress)%"
+    }
+
+    private func loadingDelay(for progress: Int) -> Int {
+        switch progress {
+        case ..<15:
+            return 500
+        case ..<52:
+            return 420
+        case ..<92:
+            return 380
+        default:
+            return 480
+        }
+    }
+
     private func showCustomToast() {
         ToastKit.show(duration: duration, isModal: isModal) {
             HStack(spacing: 12) {
@@ -159,7 +222,16 @@ struct ContentView: View {
         ToastKit.show(DemoToast.error.toastInfo, duration: 1.45, isModal: true)
 
         try? await Task.sleep(for: .milliseconds(1700))
-        ToastKit.show(DemoToast.loading.toastInfo, duration: 1.5, isModal: false)
+        for progress in loadingProgressSteps {
+            ToastKit.show(
+                ToastInfo(type: .loading(.blue), msg: loadingMessage(for: progress)),
+                duration: 0,
+                isModal: false
+            )
+            try? await Task.sleep(for: .milliseconds(loadingDelay(for: progress)))
+        }
+
+        ToastKit.show(ToastInfo(type: .success, msg: "Sync complete"), duration: 1.1, isModal: false)
     }
 }
 
@@ -167,7 +239,6 @@ private enum DemoToast {
     case success
     case warning
     case error
-    case loading
 
     var toastInfo: ToastInfo {
         switch self {
@@ -177,8 +248,6 @@ private enum DemoToast {
             ToastInfo(type: .warning, msg: "Network connection is unstable")
         case .error:
             ToastInfo(type: .error, msg: "Save failed. Please try again.")
-        case .loading:
-            ToastInfo(type: .loading(.blue), msg: "Syncing changes")
         }
     }
 }
@@ -204,6 +273,6 @@ private struct DemoButton: View {
     }
 }
 
-#Preview {
-    ContentView()
+#Preview("ToastKit Demo") {
+    ToastKitDemoPreview()
 }

@@ -33,8 +33,15 @@ import Testing
 @Test func toastTypesProvideDefaultSymbols() {
     #expect(ToastType.success.defaultSFSymbolName == "checkmark.circle.fill")
     #expect(ToastType.warning.defaultSFSymbolName == "exclamationmark.triangle.fill")
-    #expect(ToastType.error.defaultSFSymbolName == "xmark.octagon.fill")
-    #expect(ToastType.loading(.blue).defaultSFSymbolName == "arrow.triangle.2.circlepath")
+    #expect(ToastType.error.defaultSFSymbolName == "xmark.circle.fill")
+    #expect(ToastType.loading(.blue).defaultSFSymbolName == "progress.indicator")
+}
+
+@Test func toastTypesReportLoadingState() {
+    #expect(ToastType.loading(.blue).isLoading)
+    #expect(!ToastType.success.isLoading)
+    #expect(!ToastType.warning.isLoading)
+    #expect(!ToastType.error.isLoading)
 }
 
 @Test func defaultToastStyleMatchesInitializerDefaults() {

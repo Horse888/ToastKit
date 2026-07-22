@@ -5,13 +5,12 @@
 //  Created by Dio on 2026/1/11.
 //
 
+import OSLog
 import SwiftUI
 import UIKit
-import OSLog
 
 @MainActor
 public enum ToastKit {
-
     private static let logger = Logger(subsystem: "ToastKit", category: "ToastKit")
     private static var style = ToastStyle.default
 
@@ -19,6 +18,8 @@ public enum ToastKit {
     private static var dismissTask: Task<Void, Never>?
     private static var currentDuration: TimeInterval = 0
     private static var hideAction: ((ToastDismissReason) -> Void)?
+    private static var toastInfoStore: ToastInfoStore?
+    private static var currentPresentation: ToastPresentation?
 
     public static func configure(style: ToastStyle) {
         self.style = style
@@ -37,8 +38,28 @@ public enum ToastKit {
     }
 
     public static func show(_ toastInfo: ToastInfo, duration: TimeInterval = 3, isModal: Bool = false) {
-        show(duration: duration, isModal: isModal) {
-            CommonToast(toastInfo: toastInfo, style: style)
+        if canUpdatePresentedLoadingToast(with: toastInfo, isModal: isModal) {
+            dismissTask?.cancel()
+            dismissTask = nil
+            currentDuration = duration
+            withAnimation(.easeInOut(duration: 0.2)) {
+                toastInfoStore?.toastInfo = toastInfo
+            }
+            scheduleDismissal(after: duration)
+            return
+        }
+
+        let store = ToastInfoStore(toastInfo: toastInfo)
+        toastInfoStore = store
+        currentPresentation = .toastInfo(isModal: isModal)
+
+        let didPresent = present(duration: duration, isModal: isModal) {
+            LiveCommonToast(store: store, style: style)
+        }
+
+        if !didPresent {
+            toastInfoStore = nil
+            currentPresentation = nil
         }
     }
 
@@ -52,13 +73,29 @@ public enum ToastKit {
         isModal: Bool = false,
         @ViewBuilder content: @escaping () -> Content
     ) {
+        toastInfoStore = nil
+        currentPresentation = .custom(isModal: isModal)
+
+        let didPresent = present(duration: duration, isModal: isModal, content: content)
+
+        if !didPresent {
+            currentPresentation = nil
+        }
+    }
+
+    @discardableResult
+    private static func present<Content: View>(
+        duration: TimeInterval,
+        isModal: Bool,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> Bool {
         dismissTask?.cancel()
         dismissTask = nil
         currentDuration = duration
 
         guard let window = activeWindow() else {
             logger.error("Unable to present toast because no UIWindowScene is available.")
-            return
+            return false
         }
 
         let host = ToastHostView(isModal: isModal, content: content)
@@ -73,6 +110,7 @@ public enum ToastKit {
         window.makeKeyAndVisible()
 
         scheduleDismissal(after: duration)
+        return true
     }
 
     public static func hide() {
@@ -94,6 +132,8 @@ public enum ToastKit {
 
     static func finishHide() {
         hideAction = nil
+        toastInfoStore = nil
+        currentPresentation = nil
 
         guard let window else { return }
         guard let controller = window.rootViewController else { return }
@@ -145,6 +185,22 @@ public enum ToastKit {
         let toastWindow = ToastWindow(windowScene: scene)
         window = toastWindow
         return toastWindow
+    }
+
+    private static func canUpdatePresentedLoadingToast(with toastInfo: ToastInfo, isModal: Bool) -> Bool {
+        guard toastInfo.type.isLoading else {
+            return false
+        }
+
+        guard let currentPresentation, currentPresentation.isToastInfo, currentPresentation.isModal == isModal else {
+            return false
+        }
+
+        guard toastInfoStore?.toastInfo.type.isLoading == true else {
+            return false
+        }
+
+        return window?.rootViewController != nil
     }
 }
 
@@ -222,8 +278,8 @@ final class ToastWindow: UIWindow {
         let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
 
         return scenes.first(where: { $0.activationState == .foregroundActive })
-        ?? scenes.first(where: { $0.activationState == .foregroundInactive })
-        ?? scenes.first
+            ?? scenes.first(where: { $0.activationState == .foregroundInactive })
+            ?? scenes.first
     }
 
     override func layoutSubviews() {
@@ -252,13 +308,12 @@ final class ToastWindow: UIWindow {
         return nil
     }
 
-    required init?(coder: NSCoder) {
+    required init?(coder _: NSCoder) {
         return nil
     }
 }
 
 struct ToastHostView<Content: View>: View {
-
     let isModal: Bool
     let content: Content
     @State private var isVisible = false
@@ -339,8 +394,8 @@ struct ToastHostView<Content: View>: View {
             .blur(radius: blurRadius)
             .transition(
                 .move(edge: .top)
-                .combined(with: .opacity)
-                .combined(with: .scale)
+                    .combined(with: .opacity)
+                    .combined(with: .scale)
             )
             .background {
                 GeometryReader { proxy in
@@ -380,11 +435,11 @@ struct ToastHostView<Content: View>: View {
     private func dismiss(reason: ToastDismissReason) {
         let animation: Animation = switch reason {
         case .dragDown:
-                .easeOut(duration: 0.22)
+            .easeOut(duration: 0.22)
         case .dragUp:
-                .easeOut(duration: 0.18)
+            .easeOut(duration: 0.18)
         case .timeout, .programmatic:
-                .easeOut(duration: 0.2)
+            .easeOut(duration: 0.2)
         }
 
         withAnimation(animation) {
@@ -406,7 +461,7 @@ public struct ToastInfo: Sendable {
     public init(type: ToastType = .success, msg: String? = nil) {
         self.type = type
         self.msg = msg
-        self.sfSymbolName = type.defaultSFSymbolName
+        sfSymbolName = type.defaultSFSymbolName
     }
 
     public init(type: ToastType = .success, msg: String? = nil, sfSymbolName: String?) {
@@ -433,6 +488,45 @@ public enum ToastType: Sendable {
         case .loading:
             return "progress.indicator"
         }
+    }
+}
+
+extension ToastType {
+    var isLoading: Bool {
+        if case .loading = self {
+            return true
+        }
+
+        return false
+    }
+}
+
+@MainActor
+private final class ToastInfoStore: ObservableObject {
+    @Published var toastInfo: ToastInfo
+
+    init(toastInfo: ToastInfo) {
+        self.toastInfo = toastInfo
+    }
+}
+
+private enum ToastPresentation {
+    case toastInfo(isModal: Bool)
+    case custom(isModal: Bool)
+
+    var isModal: Bool {
+        switch self {
+        case let .toastInfo(isModal), let .custom(isModal):
+            return isModal
+        }
+    }
+
+    var isToastInfo: Bool {
+        if case .toastInfo = self {
+            return true
+        }
+
+        return false
     }
 }
 
@@ -566,7 +660,7 @@ public struct CommonToast: View {
     }
 
     private var symbolColor: Color {
-        if case .loading(let color) = toastInfo.type {
+        if case let .loading(color) = toastInfo.type {
             return color
         }
 
@@ -590,9 +684,7 @@ public struct CommonToast: View {
             }
 
             if let msg = toastInfo.msg {
-                Text(msg)
-                    .lineSpacing(4)
-                    .multilineTextAlignment(.leading)
+                toastMessage(msg)
             }
         }
         .font(style.font)
@@ -605,6 +697,53 @@ public struct CommonToast: View {
             symbolAnimationTrigger.toggle()
         }
     }
+
+    @ViewBuilder
+    private func toastMessage(_ msg: String) -> some View {
+        if #available(iOS 17.0, *), let numericValue = numericValue(in: msg) {
+            Text(msg)
+                .lineSpacing(4)
+                .multilineTextAlignment(.leading)
+                .contentTransition(.numericText(value: numericValue))
+                .animation(.snappy(duration: 0.25), value: numericValue)
+        } else if #available(iOS 17.0, *) {
+            Text(msg)
+                .lineSpacing(4)
+                .multilineTextAlignment(.leading)
+                .contentTransition(.numericText())
+                .animation(.snappy(duration: 0.25), value: msg)
+        } else {
+            Text(msg)
+                .lineSpacing(4)
+                .multilineTextAlignment(.leading)
+        }
+    }
+
+    private func numericValue(in message: String) -> Double? {
+        for token in message.split(whereSeparator: { !"0123456789.-".contains($0) }) {
+            let candidate = String(token)
+
+            guard candidate != "-", candidate != ".", candidate != "-." else {
+                continue
+            }
+
+            if let value = Double(candidate) {
+                return value
+            }
+        }
+
+        return nil
+    }
+}
+
+@MainActor
+private struct LiveCommonToast: View {
+    @ObservedObject var store: ToastInfoStore
+    let style: ToastStyle
+
+    var body: some View {
+        CommonToast(toastInfo: store.toastInfo, style: style)
+    }
 }
 
 private struct ToastSymbolEffectModifier: ViewModifier {
@@ -613,7 +752,6 @@ private struct ToastSymbolEffectModifier: ViewModifier {
 
     @State private var isLoadingRotating = false
 
-    @ViewBuilder
     func body(content: Content) -> some View {
         if #available(iOS 17.0, *) {
             switch type {
@@ -655,21 +793,21 @@ private struct ToastSurfaceModifier: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
 
-#if compiler(>=6.4)
-        if #available(iOS 26.0, *) {
-            content
-                .glassEffect(.regular.tint(style.glassTintColor(for: type)), in: shape)
-                .overlay {
-                    shape
-                        .strokeBorder(style.borderColor(for: type).opacity(0.35), lineWidth: style.borderWidth)
-                }
-                .shadow(color: style.shadowColor.opacity(0.7), radius: style.shadowRadius, x: style.shadowX, y: style.shadowY)
-        } else {
+        #if compiler(>=6.4)
+            if #available(iOS 26.0, *) {
+                content
+                    .glassEffect(.regular.tint(style.glassTintColor(for: type)), in: shape)
+                    .overlay {
+                        shape
+                            .strokeBorder(style.borderColor(for: type).opacity(0.35), lineWidth: style.borderWidth)
+                    }
+                    .shadow(color: style.shadowColor.opacity(0.7), radius: style.shadowRadius, x: style.shadowX, y: style.shadowY)
+            } else {
+                fallbackSurface(content: content, shape: shape)
+            }
+        #else
             fallbackSurface(content: content, shape: shape)
-        }
-#else
-        fallbackSurface(content: content, shape: shape)
-#endif
+        #endif
     }
 
     private func fallbackSurface(content: Content, shape: RoundedRectangle) -> some View {
@@ -683,204 +821,3 @@ private struct ToastSurfaceModifier: ViewModifier {
             .shadow(color: style.shadowColor, radius: style.shadowRadius, x: style.shadowX, y: style.shadowY)
     }
 }
-
-#if compiler(>=6.4)
-@available(iOS 26, *)
-#Preview("Toast · Playground") {
-    ToastPreviewPlayground()
-}
-
-@available(iOS 26, *)
-private struct ToastPreviewPlayground: View {
-
-    enum DemoToast: CaseIterable, Identifiable {
-        case success
-        case warning
-        case error
-        case loading
-        case longText
-
-        var id: Self { self }
-
-        var title: String {
-            switch self {
-            case .success:  return "Success"
-            case .warning:  return "Warning"
-            case .error:    return "Error"
-            case .loading:  return "Loading"
-            case .longText: return "Long Text"
-            }
-        }
-
-        var toastInfo: ToastInfo {
-            switch self {
-            case .success:
-                return ToastInfo(
-                    type: .success,
-                    msg: "Sync complete",
-                    sfSymbolName: "checkmark.circle.fill"
-                )
-
-            case .warning:
-                return ToastInfo(
-                    type: .warning,
-                    msg: "Network connection is unstable",
-                    sfSymbolName: "exclamationmark.triangle.fill"
-                )
-
-            case .error:
-                return ToastInfo(
-                    type: .error,
-                    msg: "Save failed. Please try again.",
-                    sfSymbolName: "xmark.circle.fill"
-                )
-
-            case .loading:
-                return ToastInfo(
-                    type: .loading(.accentColor),
-                    msg: "Syncing..."
-                )
-
-            case .longText:
-                return ToastInfo(
-                    type: .success,
-                    msg: "This is a longer toast message used to verify that multiline content keeps a stable layout.",
-                    sfSymbolName: "text.alignleft"
-                )
-            }
-        }
-    }
-
-    @State private var currentToast: DemoToast? = nil
-    @State private var isModal = false
-    @State private var duration = 3.0
-    @State private var useCompactStyle = false
-
-    var body: some View {
-        ZStack {
-            if #available(iOS 18.0, *) {
-                TimelineView(.animation) { t in
-                    let time = t.date.timeIntervalSinceReferenceDate
-                    let wave = Float(sin(time * 0.6)) * 1.8
-                    let wave2 = Float(cos(time * 0.8)) * 2.6
-
-                    MeshGradient(
-                        width: 3,
-                        height: 3,
-                        points: [
-                            [0.0, 0.0],
-                            [0.5 + wave * 0.12, 0.0],
-                            [1.0, 0.0],
-
-                            [0.0, 0.5 + wave2 * 0.10],
-                            [0.5 + wave * 0.08, 0.5 + wave2 * 0.08],
-                            [1.0, 0.5 - wave * 0.10],
-
-                            [0.0, 1.0],
-                            [0.5 - wave2 * 0.12, 1.0],
-                            [1.0, 1.0]
-                        ],
-                        colors: [
-                            Color(red: 0.30, green: 0.55, blue: 1.00),
-                            Color(red: 0.52, green: 0.42, blue: 1.00),
-                            Color(red: 0.28, green: 0.86, blue: 1.00),
-                            Color(red: 0.48, green: 0.78, blue: 1.00),
-                            Color.white.opacity(0.9),
-                            Color(red: 0.42, green: 0.92, blue: 0.95),
-                            Color(red: 0.66, green: 0.54, blue: 1.00),
-                            Color(red: 0.90, green: 0.72, blue: 1.00),
-                            Color(red: 0.35, green: 0.72, blue: 1.00)
-                        ]
-                    )
-                }
-                .ignoresSafeArea()
-            }
-            else {
-                LinearGradient(
-                    colors: [.blue, .purple, .cyan],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
-            }
-
-            VStack(spacing: 18) {
-                VStack(spacing: 10) {
-                    Text(verbatim: "ToastKit")
-                        .font(.largeTitle.bold())
-
-                    Text(verbatim: "Preview Playground")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.bottom, 8)
-
-                VStack(spacing: 12) {
-                    Toggle(isOn: $isModal) {
-                        Text(verbatim: "Modal overlay")
-                    }
-
-                    Toggle(isOn: $useCompactStyle) {
-                        Text(verbatim: "Compact style")
-                    }
-
-                    HStack {
-                        Text(verbatim: "Duration")
-                        Spacer()
-                        Text(verbatim: duration == 0 ? "Manual" : "\(duration.formatted(.number))s")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Slider(value: $duration, in: 0...5, step: 1)
-                }
-                .padding()
-                .background(.regularMaterial, in: .rect(cornerRadius: 20, style: .continuous))
-
-                VStack(spacing: 12) {
-                    ForEach(DemoToast.allCases) { toast in
-                        Button {
-                            applyPreviewStyle()
-                            currentToast = toast
-                        } label: {
-                            Text(verbatim: toast.title)
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.glassProminent)
-                    }
-
-                    Button {
-                        ToastKit.hide(reason: .programmatic)
-                    } label: {
-                        Text(verbatim: "Hide Toast")
-                    }
-                    .buttonStyle(.glassProminent)
-                }
-            }
-            .padding(24)
-        }
-        .onChange(of: currentToast) { _, newValue in
-            guard let newValue else { return }
-            ToastKit.show(newValue.toastInfo, duration: duration, isModal: isModal)
-            currentToast = nil
-        }
-    }
-
-    private func applyPreviewStyle() {
-        if useCompactStyle {
-            ToastKit.configure(
-                style: ToastStyle(
-                    font: .system(size: 14, weight: .semibold),
-                    horizontalPadding: 20,
-                    verticalPadding: 10,
-                    contentHorizontalPadding: 20,
-                    cornerRadius: 20,
-                    shadowRadius: 20,
-                    shadowY: 3
-                )
-            )
-        } else {
-            ToastKit.configure(style: .default)
-        }
-    }
-}
-#endif
